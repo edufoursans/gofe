@@ -25,7 +25,7 @@ import (
 	"github.com/fentec-project/gofe/sample"
 )
 
-// SGP implements efficient FE scheme for quadratic multi-variate polynomials
+// DGP implements efficient FE scheme for quadratic multi-variate polynomials
 // based on Dufour Sans, Gay and Pointcheval:
 // "Reading in the Dark: Classifying Encrypted Digits with
 // Functional Encryption".
@@ -33,10 +33,10 @@ import (
 // It offers adaptive security under chosen-plaintext attacks (IND-CPA security).
 // This is a secret key scheme, meaning that we need a master secret key to
 // encrypt the messages.
-// Assuming input vectors x and y, the SGP scheme allows the decryptor to
+// Assuming input vectors x and y, the DGP scheme allows the decryptor to
 // calculate x^T * F * y, where F is matrix that represents the function,
 // and vectors x, y are only known to the encryptor, but not to decryptor.
-type SGP struct {
+type DGP struct {
 	// length of vectors x and y (matrix F is N x N)
 	N int
 	// Modulus for ciphertext and keys
@@ -51,12 +51,12 @@ type SGP struct {
 	GInvCalc *dlog.CalcBN256
 }
 
-// NewSGP configures a new instance of the SGP scheme.
+// NewDGP configures a new instance of the DGP scheme.
 // It accepts the length of input vectors n and the upper bound b
 // for coordinates of input vectors x, y, and the function
 // matrix F.
-func NewSGP(n int, b *big.Int) *SGP {
-	return &SGP{
+func NewDGP(n int, b *big.Int) *DGP {
+	return &DGP{
 		N:        n,
 		Mod:      bn256.Order,
 		Bound:    b,
@@ -65,26 +65,26 @@ func NewSGP(n int, b *big.Int) *SGP {
 	}
 }
 
-// SGPSecKey represents a master secret key for the SGP scheme.
+// DGPSecKey represents a master secret key for the DGP scheme.
 // An instance of this type is returned by the
 // GenerateMasterKey method.
-type SGPSecKey struct {
+type DGPSecKey struct {
 	S data.Vector
 	T data.Vector
 }
 
-// NewSGPSecKey constructs an instance of SGPSecKey.
-func NewSGPSecKey(s, t data.Vector) *SGPSecKey {
-	return &SGPSecKey{
+// NewDGPSecKey constructs an instance of DGPSecKey.
+func NewDGPSecKey(s, t data.Vector) *DGPSecKey {
+	return &DGPSecKey{
 		S: s,
 		T: t,
 	}
 }
 
 // GenerateMasterKey generates a master secret key for the
-// SGP scheme. It returns an error if the secret key could
+// DGP scheme. It returns an error if the secret key could
 // not be generated.
-func (q *SGP) GenerateMasterKey() (*SGPSecKey, error) {
+func (q *DGP) GenerateMasterKey() (*DGPSecKey, error) {
 	// msk is random s, t from Z_p^n
 	sampler := sample.NewUniform(q.Mod)
 	s, err := data.NewRandomVector(q.N, sampler)
@@ -96,21 +96,21 @@ func (q *SGP) GenerateMasterKey() (*SGPSecKey, error) {
 		return nil, err
 	}
 
-	return NewSGPSecKey(s, t), nil
+	return NewDGPSecKey(s, t), nil
 }
 
-// SGPCipher represents a ciphertext. An instance of this type
+// DGPCipher represents a ciphertext. An instance of this type
 // is returned as a result of the Encrypt method.
-type SGPCipher struct {
+type DGPCipher struct {
 	G1MulGamma *bn256.G1
 	AMulG1     []data.VectorG1
 	BMulG2     []data.VectorG2
 }
 
-// NewSGPCipher constructs an instance of SGPCipher.
-func NewSGPCipher(g1MulGamma *bn256.G1, aMulG1 []data.VectorG1,
-	bMulG2 []data.VectorG2) *SGPCipher {
-	return &SGPCipher{
+// NewDGPCipher constructs an instance of DGPCipher.
+func NewDGPCipher(g1MulGamma *bn256.G1, aMulG1 []data.VectorG1,
+	bMulG2 []data.VectorG2) *DGPCipher {
+	return &DGPCipher{
 		G1MulGamma: g1MulGamma,
 		AMulG1:     aMulG1,
 		BMulG2:     bMulG2,
@@ -120,7 +120,7 @@ func NewSGPCipher(g1MulGamma *bn256.G1, aMulG1 []data.VectorG1,
 // Encrypt encrypts input vectors x and y with the
 // master secret key msk. It returns the appropriate ciphertext.
 // If ciphertext could not be generated, it returns an error.
-func (q *SGP) Encrypt(x, y data.Vector, msk *SGPSecKey) (*SGPCipher, error) {
+func (q *DGP) Encrypt(x, y data.Vector, msk *DGPSecKey) (*DGPCipher, error) {
 	sampler := sample.NewUniform(q.Mod)
 	gamma, err := sampler.Sample()
 	if err != nil {
@@ -167,14 +167,14 @@ func (q *SGP) Encrypt(x, y data.Vector, msk *SGPSecKey) (*SGPCipher, error) {
 		bMulG2[i] = b[i].MulG2()
 	}
 
-	c := NewSGPCipher(new(bn256.G1).ScalarBaseMult(gamma), aMulG1, bMulG2)
+	c := NewDGPCipher(new(bn256.G1).ScalarBaseMult(gamma), aMulG1, bMulG2)
 
 	return c, nil
 }
 
 // DeriveKey derives the functional encryption key for the scheme.
 // It returns an error if the key could not be derived.
-func (q *SGP) DeriveKey(msk *SGPSecKey, F data.Matrix) (*bn256.G2, error) {
+func (q *DGP) DeriveKey(msk *DGPSecKey, F data.Matrix) (*bn256.G2, error) {
 	// F is matrix and represents function (x, y) -> Σ f_i,j * x_i * y_i.
 	// Functional encryption key is g2 * f(s, t).
 	v, err := F.MulXMatY(msk.S, msk.T)
@@ -194,7 +194,7 @@ func (q *SGP) DeriveKey(msk *SGPSecKey, F data.Matrix) (*bn256.G2, error) {
 
 // Decrypt decrypts the ciphertext c with the derived functional
 // encryption key key in order to obtain function x^T * F * y.
-func (q *SGP) Decrypt(c *SGPCipher, key *bn256.G2, F data.Matrix) (*big.Int, error) {
+func (q *DGP) Decrypt(c *DGPCipher, key *bn256.G2, F data.Matrix) (*big.Int, error) {
 	prod := bn256.Pair(c.G1MulGamma, key)
 
 	for i, row := range F {
@@ -226,4 +226,33 @@ func (q *SGP) Decrypt(c *SGPCipher, key *bn256.G2, F data.Matrix) (*big.Int, err
 	b := new(big.Int).Mul(n2, b3)
 
 	return q.GCalc.WithBound(b).WithNeg().BabyStepGiantStep(prod, g)
+}
+
+// Function wrappers and type aliases for backward compatibility after changing SGP to DGP.
+// New code should use "DGP".
+// See https://github.com/fentec-project/gofe/issues/21 for details.
+
+// SGP is a type alias for DGP, which is defined above.
+type SGP = DGP
+
+// NewSGP is a function wrapper for NewDGP, which is defined above.
+func NewSGP(n int, b *big.Int) *DGP {
+	return NewDGP(n, b)
+}
+
+// SGPSecKey is a type alias for DGPSecKey, which is defined above.
+type SGPSecKey = DGPSecKey
+
+// NewSGPSecKey is a function wrapper for NewDGPSecKey, which is defined above.
+func NewSGPSecKey(s, t data.Vector) *DGPSecKey {
+	return NewDGPSecKey(s, t)
+}
+
+// SGPCipher is a type alias for DGPCipher, which is defined above.
+type SGPCipher = DGPCipher
+
+// NewSGPCipher is a function wrapper for NewDGPCipher, which is defined above.
+func NewSGPCipher(g1MulGamma *bn256.G1, aMulG1 []data.VectorG1,
+	bMulG2 []data.VectorG2) *DGPCipher {
+	return NewDGPCipher(g1MulGamma, aMulG1, bMulG2)
 }

@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSGP(t *testing.T) {
+func TestDGP(t *testing.T) {
 	bound := big.NewInt(1000)
 	sampler := sample.NewUniformRange(new(big.Int).Neg(bound), bound)
 	n := 2
@@ -35,7 +35,7 @@ func TestSGP(t *testing.T) {
 		t.Fatalf("error when generating random matrix: %v", err)
 	}
 
-	q := quadratic.NewSGP(n, bound)
+	q := quadratic.NewDGP(n, bound)
 	msk, err := q.GenerateMasterKey()
 	if err != nil {
 		t.Fatalf("error when generating master keys: %v", err)

@@ -57,7 +57,7 @@ security) by
     * Decentralized scheme based on paper by _Chotard, Dufour Sans, Gay, Phan and Pointcheval_ ([paper](https://eprint.iacr.org/2017/989.pdf)). This scheme does not require a trusted party to generate keys. It is built on pairings (`fullysec.DMCFEClient`).
 
 #### Quadratic polynomial schemes
-You will need `SGP` scheme from package `quadratic`. 
+You will need `DGP` scheme from package `quadratic`. 
 
 It contains an
 implementation of an efficient FE scheme for **quadratic multi-variate
@@ -263,11 +263,11 @@ F, _ := data.NewRandomMatrix(l, l, sampler)
 x, _ := data.NewRandomVector(l, sampler)
 y, _ := data.NewRandomVector(l, sampler)
 
-sgp := quadratic.NewSGP(l, bound)     // Create scheme instance
-msk, _ := sgp.GenerateMasterKey()     // Create master secret key
-cipher, _ := sgp.Encrypt(x, y, msk)   // Encrypt input vectors x, y with secret key
-key, _ := sgp.DeriveKey(msk, F)       // Derive FE key for decryption
-dec, _ := sgp.Decrypt(cipher, key, F) // Decrypt the result to obtain x^T * F * y
+dgp := quadratic.NewDGP(l, bound)     // Create scheme instance
+msk, _ := dgp.GenerateMasterKey()     // Create master secret key
+cipher, _ := dgp.Encrypt(x, y, msk)   // Encrypt input vectors x, y with secret key
+key, _ := dgp.DeriveKey(msk, F)       // Derive FE key for decryption
+dec, _ := dgp.Decrypt(cipher, key, F) // Decrypt the result to obtain x^T * F * y
 ```
 
 ##### Using ABE schemes
